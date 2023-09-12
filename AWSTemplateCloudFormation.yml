@@ -61,6 +61,25 @@ Resources:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref MyInternetGateway
 
+  MyPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref MyPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref MyInternetGateway
+
+  MyPublicSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref MyPublicRouteTable
+
 
   MyLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -190,5 +209,3 @@ Outputs:
           wget https://wordpress.org/latest.tar.gz
           tar -xzvf latest.tar.gz
           mv wordpress/* /var/www/html
-
-
