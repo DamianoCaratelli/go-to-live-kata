@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Template for a Virtual Private Cloud (VPC).
 
 Resources:
-# VPC e 2 Subnet
+# VPC con cidr 10.0.0.0/16
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -11,9 +11,10 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: MyVPC
+          Value: VPC
 
-  SubnetA:
+# 2 Public Subnet e 2 Private Subnet
+  PublicSubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
@@ -21,27 +22,56 @@ Resources:
       CidrBlock: 10.0.0.0/24
       MapPublicIpOnLaunch: true
 
-  SubnetB:
+  PublicSubnetB:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: eu-west-1b
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
+  
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: eu-west-1a
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: true
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: eu-west-1b
+      CidrBlock: 10.0.3.0/24
+      MapPublicIpOnLaunch: true
+
+# Creazione Internet Gateway
+
+  MyInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "MyInternetGateway"
+
+  MyVPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref MyInternetGateway
+
 
   MyLoadBalancer:
-  Type: AWS::ElasticLoadBalancing::LoadBalancer
-  Properties:
-    Listeners:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Listeners:
       - LoadBalancerPort: 80
         InstancePort: 8080 
         Protocol: HTTP 
-    AvailabilityZones:
-      - !Ref 'Subnet-1'
-      - !Ref 'Subnet-2'
     Subnets:
-      - !Ref 'MySubnet1'
-      - !Ref 'MySubnet2'
+      - !Ref 'PublicSubnetA'
+      - !Ref 'PublicSubnetB'
 
 MyLoadBalancerAttachment:
   Type: AWS::AutoScaling::AutoScalingGroup
