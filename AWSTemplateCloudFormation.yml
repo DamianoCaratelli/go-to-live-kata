@@ -61,6 +61,8 @@ Resources:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref MyInternetGateway
 
+#Route Table Public
+
   MyPublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -74,11 +76,66 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref MyInternetGateway
 
-  MyPublicSubnetRouteTableAssociation1:
+  MyPublicRouteTableAssociation1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PublicSubnetA
       RouteTableId: !Ref MyPublicRouteTable
+
+# Creazione NAT Gateway con relativo Elastic IP
+
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIPNatGateway.AllocationId
+      SUbnetId: !Ref PublicSubnetA
+
+  EIPNatGateway:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+#Creazione Private Route
+
+  MyPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref MyPrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway
+
+  MyPrivateRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref MyPrivateRouteTable
+
+#Security Group con traffico in entrata http, ssh, https
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for EC2 instances
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
 
 
   MyLoadBalancer:
