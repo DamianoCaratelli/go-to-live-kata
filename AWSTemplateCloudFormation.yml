@@ -165,47 +165,59 @@ Resources:
         TargetGroupArn: !Ref MyTargetGroup
 
 
-MyLoadBalancerAttachment:
-  Type: AWS::AutoScaling::AutoScalingGroup
-  Properties:
-    AutoScalingGroupName: !Ref 'MyAutoScalingGroup'
-    LoadBalancerNames:
-      - !Ref 'MyLoadBalancer'
+  MyLoadBalancerAttachment:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Ref 'MyAutoScalingGroup'
+      LoadBalancerNames:
+        - !Ref 'MyLoadBalancer'
 
-  EC2Instance:
-    Type: AWS::EC2::Instance
+  MyLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: "ami-04b1ddd35fd71475a"    #Ubuntu Linux 14.04 x64 
-      InstanceType: t2.micro
-      KeyName: my-key-pair
-      SecurityGroupIds:
-        - !Ref SecurityGroup 
-  SecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow HTTP and SSH access
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-    
+      ImageId: "ami-04b1ddd35fd71475a"    #Ubuntu Linux 14.04 x64
+      InstanceType: t2.micro  
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -ex
+
+          # Installa Apache e PHP
+          yum update -y
+          yum install -y httpd24 php56 mysql
+
+          # Scarica e installa WordPress
+          cd /var/www/html
+          wget https://wordpress.org/latest.tar.gz
+          tar -xzvf latest.tar.gz
+          chown -R apache:apache wordpress
+
+          # Configura WordPress
+          cp wordpress/wp-config-sample.php wordpress/wp-config.php
+          sed -i 's/database_name_here/mydb/' wordpress/wp-config.php
+          sed -i 's/username_here/mydbuser/' wordpress/wp-config.php
+          sed -i 's/password_here/mypassword/' wordpress/wp-config.php
+
+          # Avvia Apache
+          service httpd start
+          chkconfig httpd on
+
   MyAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      AvailabilityZones:
-        - !Ref 'AvailabilityZone'
-      LaunchConfigurationName: "MyLaunchConfig"
-      MinSize: 2
-      MaxSize: 6
-      DesiredCapacity: 4
+      LaunchConfigurationName: !Ref MyLaunchConfig
+      MinSize: 1  # Il numero minimo di istanze nel gruppo
+      MaxSize: 5  # Il numero massimo di istanze nel gruppo
+      DesiredCapacity: 2  # Il numero desiderato di istanze nel gruppo
       HealthCheckType: EC2
-      HealthCheckGracePeriod: 300                        
+      HealthCheckGracePeriod: 300   
+      VPCZoneIdentifier:
+        !Ref 'PublicSubnetA'
+      - !Ref 'PublicSubnetB'
+
+      Tags:
+        - Key: Name
+          Value: "MyWordPressInstance"
+                           
 
 # RDS (Database) 
   MyDBInstance: 
@@ -229,56 +241,3 @@ MyLoadBalancerAttachment:
           FromPort: '3306'
           ToPort: '3306'
           CidrIp: 0.0.0.0/0
-
-  MyWebApp:
-    Type: AWS::ElasticBeanstalk::Application
-    Properties:
-      Description: WordPress Application
-
-  MyEnvironment:
-    Type: AWS::ElasticBeanstalk::Environment
-    Properties:
-      ApplicationName: !Ref MyWebApp
-      Description: WordPress Environment
-      EnvironmentName: MyWordPressEnvironment
-      SolutionStackName: 64bit Amazon Linux 2 v4.3.1 running PHP 7.4
-      OptionSettings:
-        - Namespace: aws:autoscaling:launchconfiguration
-          OptionName: InstanceType
-          Value: !Ref InstanceType
-      Tier:
-        Type: Standard
-      VersionLabel: SampleApplication
-
-Outputs:
-  WebsiteURL:
-    Description: URL of the WordPress Website
-    Value: !GetAtt MyEnvironment.EndpointURL
-  MyEnvironment:
-    Type: AWS::ElasticBeanstalk::Environment
-    Properties:
-      ApplicationName: !Ref MyWebApp
-      ...
-
-      OptionSettings:
-        - Namespace: aws:elasticbeanstalk:container:php:phpini
-          OptionName: document_root
-          Value: /var/www/html/wordpress
-
-        - Namespace: aws:elasticbeanstalk:container:php:phpini
-          OptionName: memory_limit
-          Value: 256M
-
-      ...
-
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash -xe
-          yum install -y httpd
-          service httpd start
-          chkconfig httpd on
-
-          # Install WordPress
-          wget https://wordpress.org/latest.tar.gz
-          tar -xzvf latest.tar.gz
-          mv wordpress/* /var/www/html
