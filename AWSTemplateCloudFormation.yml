@@ -136,18 +136,34 @@ Resources:
           ToPort: 443
           CidrIp: 0.0.0.0/0
 
-
+  MyTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref MyVPC
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
 
   MyLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Listeners:
-      - LoadBalancerPort: 80
-        InstancePort: 8080 
-        Protocol: HTTP 
     Subnets:
       - !Ref 'PublicSubnetA'
       - !Ref 'PublicSubnetB'
+
+    SecurityGroups:
+      -!Ref EC2SecurityGroup
+
+  MyListener:
+  Type: AWS::ElasticLoadBalancingV2::Listener
+  Properties:
+    LoadBalancerArn: !Ref MyLoadBalancer
+    Protocol: HTTP
+    Port: 80
+    DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref MyTargetGroup
+
 
 MyLoadBalancerAttachment:
   Type: AWS::AutoScaling::AutoScalingGroup
