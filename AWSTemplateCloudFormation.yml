@@ -84,11 +84,23 @@ Resources:
 
 # Creazione NAT Gateway con relativo Elastic IP
 
+  NatGatewaySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for NAT Gateway
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '443' 
+          ToPort: '443'   
+          CidrIp: 0.0.0.0/0 # Consentire la comunicazione in ingresso da qualsiasi punto
+
   NATGateway:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt EIPNatGateway.AllocationId
       SUbnetId: !Ref PublicSubnetA
+      SecurityGroupIDs:
+        - !Ref NatGatewaySecurityGroup
 
   EIPNatGateway:
     Type: AWS::EC2::EIP
@@ -221,6 +233,15 @@ Resources:
                            
 
 # RDS (Database) 
+  
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS in both availability zones
+      SubnetIds:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+  
   MyDBInstance: 
     Type: AWS::RDS::DBInstance
     Properties:
@@ -232,6 +253,16 @@ Resources:
       MasterUserPassword: adminpassword
       VPCSecurityGroups:
         - !GetAtt MyDBSecurityGroup.GroupId
+      DBSubnetGroupName: !Ref DBSubnetGroup
+  
+  MyDBReadReplica:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: mydb-read-replica
+      SourceDBInstanceIdentifier: !Ref MyDBInstance
+      DBInstanceClass: db.t2.micro
+      AvailabilityZone: us-west-1b
+      DBSubnetGroupName: !Ref DBSubnetGroup
 
   MyDBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -242,3 +273,17 @@ Resources:
           FromPort: '3306'
           ToPort: '3306'
           CidrIp: 0.0.0.0/0
+
+  MyDBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          DestinationSecurityGroupId: !GetAtt NatGatewaySecurityGroup.GroupId # Usato per comunicazione in uscita con NAT Gateway
