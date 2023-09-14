@@ -211,12 +211,13 @@ Resources:
       HealthCheckType: EC2
       HealthCheckGracePeriod: 300   
       VPCZoneIdentifier:
-        !Ref 'PublicSubnetA'
-      - !Ref 'PublicSubnetB'
-
+        - !Ref 'PublicSubnetA'
+        - !Ref 'PublicSubnetB'
+      TargetGroupARNs:
+        - !Ref TargetGroup
       Tags:
         - Key: Name
-          Value: "MyWordPressInstance"
+        - Value: "MyWordPressInstance"
                            
 
 # RDS (Database) 
