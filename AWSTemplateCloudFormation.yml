@@ -287,3 +287,37 @@ Resources:
           FromPort: '3306'
           ToPort: '3306'
           DestinationSecurityGroupId: !GetAtt NatGatewaySecurityGroup.GroupId # Usato per comunicazione in uscita con NAT Gateway
+
+  Resources:
+  MyCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: "Descrizione della distribuzione"
+        DefaultRootObject: "index.html"
+        Enabled: true
+        PriceClass: "PriceClass_100"
+        ViewerCertificate:
+          SslSupportMethod: "sni-only"
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          TargetOriginId: "MyELBOrigin"
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: "none"
+          ViewerProtocolPolicy: "allow-all"
+        Origins:
+          - Id: "MyELBOrigin"
+            DomainName: !GetAtt MyLoadBalancer.DNSName  # Ottiene il DNS name del tuo ELB
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: "https-only"
