@@ -84,23 +84,23 @@ Resources:
 
 # Creazione NAT Gateway con relativo Elastic IP
 
-  NatGatewaySecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for NAT Gateway
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '443' 
-          ToPort: '443'   
-          CidrIp: 0.0.0.0/0 # Consentire la comunicazione in ingresso da qualsiasi punto
+  # NatGatewaySecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     GroupDescription: Security group for NAT Gateway
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: '443' 
+  #         ToPort: '443'   
+  #         CidrIp: 0.0.0.0/0 # Consentire la comunicazione in ingresso da qualsiasi punto
 
   NATGateway:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt EIPNatGateway.AllocationId
-      SUbnetId: !Ref PublicSubnetA
-      SecurityGroupIDs:
-        - !Ref NatGatewaySecurityGroup
+      SubnetId: !Ref PublicSubnetA
+      # SecurityGroupIDs:
+      #   - !Ref NatGatewaySecurityGroup
 
   EIPNatGateway:
     Type: AWS::EC2::EIP
@@ -160,11 +160,11 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Subnets:
-        - !Ref 'PublicSubnetA'
-        - !Ref 'PublicSubnetB'
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
 
       SecurityGroups:
-        -!Ref EC2SecurityGroup
+        - !Ref EC2SecurityGroup
 
   MyListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -216,11 +216,11 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       LaunchConfigurationName: !Ref MyLaunchConfig
-      MinSize: 1  # Il numero minimo di istanze nel gruppo
-      MaxSize: 5  # Il numero massimo di istanze nel gruppo
-      DesiredCapacity: 2  # Il numero desiderato di istanze nel gruppo
+      MinSize: "1"  # Il numero minimo di istanze nel gruppo
+      MaxSize: "5"  # Il numero massimo di istanze nel gruppo
+      DesiredCapacity: "2"  # Il numero desiderato di istanze nel gruppo
       HealthCheckType: EC2
-      HealthCheckGracePeriod: 300   
+      HealthCheckGracePeriod: "300"   
       VPCZoneIdentifier:
         - !Ref 'PublicSubnetA'
         - !Ref 'PublicSubnetB'
