@@ -265,13 +265,12 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group for RDS
+      VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '3306'
           ToPort: '3306'
-      SecurityGroupEgress:
-          DestinationSecurityGroupId: !GetAtt NatGatewaySecurityGroup.GroupId # Usato per comunicazione in uscita con NAT Gateway
-
+      SourceSecurityGroupId: !Ref EC2SecurityGroup
   
   MyCloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
