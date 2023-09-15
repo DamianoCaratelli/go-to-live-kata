@@ -124,7 +124,7 @@ Resources:
   MyPrivateRouteTableAssociation1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnetA
+      SubnetId: !Ref PrivateSubnetA
       RouteTableId: !Ref MyPrivateRouteTable
 
 #Security Group con traffico in entrata http, ssh, https
@@ -166,6 +166,7 @@ Resources:
       SecurityGroups:
         - !Ref EC2SecurityGroup
 
+  
   MyListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -174,14 +175,11 @@ Resources:
       Port: 80
       DefaultActions:
         - Type: forward
+          TargetGroupArn: !Ref MyTargetGroup
 
 
-  MyLoadBalancerAttachment:
-    Type: AWS::AutoScaling::AutoScalingGroup
-    Properties:
-      AutoScalingGroupName: !Ref 'MyAutoScalingGroup'
-      LoadBalancerNames:
-        - !Ref 'MyLoadBalancer'
+
+
 
   MyLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -216,18 +214,15 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       LaunchConfigurationName: !Ref MyLaunchConfig
-      MinSize: "1"  # Il numero minimo di istanze nel gruppo
-      MaxSize: "5"  # Il numero massimo di istanze nel gruppo
-      DesiredCapacity: "2"  # Il numero desiderato di istanze nel gruppo
-      HealthCheckType: EC2
-      HealthCheckGracePeriod: "300"   
+      Cooldown: "300"
+      DesiredCapacity: "2"
+      MaxSize: "5"
+      MinSize: "2"
       VPCZoneIdentifier:
-        - !Ref 'PublicSubnetA'
-        - !Ref 'PublicSubnetB'
-      Tags:
-        - Key: Name
-        - Value: "MyWordPressInstance"
-                           
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+      TargetGroupARNs:
+      - !Ref MyTargetGroup          
 
 # RDS (Database) 
   
@@ -248,9 +243,7 @@ Resources:
       EngineVersion: 5.7
       MasterUsername: admin
       MasterUserPassword: adminpassword
-      VPCSecurityGroups:
-        - !GetAtt MyDBSecurityGroup.GroupId
-      DBSubnetGroupName: !Ref DBSubnetGroup
+      DBSubnetGroupName: !Ref "DBSubnetGroup"
   
   # MyDBReadReplica:
   #   Type: AWS::RDS::DBInstance
@@ -270,37 +263,37 @@ Resources:
         - IpProtocol: tcp
           FromPort: '3306'
           ToPort: '3306'
-      SourceSecurityGroupId: !Ref EC2SecurityGroup
+      #SourceSecurityGroupName: !Ref EC2SecurityGroup
   
-  MyCloudFrontDistribution:
-    Type: AWS::CloudFront::Distribution
-    Properties:
-      DistributionConfig:
-        Comment: "Descrizione della distribuzione"
-        DefaultRootObject: "index.html"
-        Enabled: true
-        PriceClass: "PriceClass_100"
-        ViewerCertificate:
-          SslSupportMethod: "sni-only"
-        DefaultCacheBehavior:
-          AllowedMethods:
-            - GET
-            - HEAD
-            - OPTIONS
-          CachedMethods:
-            - GET
-            - HEAD
-          Compress: true
-          TargetOriginId: "MyELBOrigin"
-          ForwardedValues:
-            QueryString: false
-            Cookies:
-              Forward: "none"
-          ViewerProtocolPolicy: "allow-all"
-        Origins:
-          - Id: "MyELBOrigin"
-            DomainName: !GetAtt MyLoadBalancer.DNSName  # Ottiene il DNS name del tuo ELB
-            CustomOriginConfig:
-              HTTPPort: 80
-              HTTPSPort: 443
-              OriginProtocolPolicy: "https-only"
+  # MyCloudFrontDistribution:
+  #   Type: AWS::CloudFront::Distribution
+  #   Properties:
+  #     DistributionConfig:
+  #       Comment: "Descrizione della distribuzione"
+  #       DefaultRootObject: "index.html"
+  #       Enabled: true
+  #       PriceClass: "PriceClass_100"
+  #       ViewerCertificate:
+  #         SslSupportMethod: "sni-only"
+  #       DefaultCacheBehavior:
+  #         AllowedMethods:
+  #           - GET
+  #           - HEAD
+  #           - OPTIONS
+  #         CachedMethods:
+  #           - GET
+  #           - HEAD
+  #         Compress: true
+  #         TargetOriginId: "MyELBOrigin"
+  #         ForwardedValues:
+  #           QueryString: false
+  #           Cookies:
+  #             Forward: "none"
+  #         ViewerProtocolPolicy: "allow-all"
+  #       Origins:
+  #         - Id: "MyELBOrigin"
+  #           DomainName: !GetAtt MyLoadBalancer.DNSName  # Ottiene il DNS name del tuo ELB
+  #           CustomOriginConfig:
+  #             HTTPPort: 80
+  #             HTTPSPort: 443
+  #             OriginProtocolPolicy: "https-only"
