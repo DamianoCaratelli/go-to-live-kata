@@ -269,21 +269,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: '3306'
           ToPort: '3306'
-          CidrIp: 0.0.0.0/0
-
-  MyDBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for RDS
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '3306'
-          ToPort: '3306'
       SecurityGroupEgress:
-        - IpProtocol: tcp
-          FromPort: '3306'
-          ToPort: '3306'
-          CidrIp: "0.0.0.0/0"
           DestinationSecurityGroupId: !GetAtt NatGatewaySecurityGroup.GroupId # Usato per comunicazione in uscita con NAT Gateway
 
   
