@@ -70,7 +70,7 @@ Resources:
   
   PublicRoute:
     Type: AWS::EC2::Route
-    DependsOn: AttachGateway
+    DependsOn: MyVPCGatewayAttachment
     Properties:
       RouteTableId: !Ref MyPublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -159,22 +159,21 @@ Resources:
   MyLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-    Subnets:
-      - !Ref 'PublicSubnetA'
-      - !Ref 'PublicSubnetB'
+      Subnets:
+        - !Ref 'PublicSubnetA'
+        - !Ref 'PublicSubnetB'
 
-    SecurityGroups:
-      -!Ref EC2SecurityGroup
+      SecurityGroups:
+        -!Ref EC2SecurityGroup
 
   MyListener:
-  Type: AWS::ElasticLoadBalancingV2::Listener
-  Properties:
-    LoadBalancerArn: !Ref MyLoadBalancer
-    Protocol: HTTP
-    Port: 80
-    DefaultActions:
-      - Type: forward
-        TargetGroupArn: !Ref MyTargetGroup
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref MyLoadBalancer
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: forward
 
 
   MyLoadBalancerAttachment:
@@ -187,7 +186,7 @@ Resources:
   MyLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: "ami-04b1ddd35fd71475a"    #Ubuntu Linux 14.04 x64
+      ImageId: "ami-07be51e3c6d5f61d2"    #Ubuntu Linux 14.04 x64
       InstanceType: t2.micro  
       UserData:
         Fn::Base64: !Sub |
@@ -225,8 +224,6 @@ Resources:
       VPCZoneIdentifier:
         - !Ref 'PublicSubnetA'
         - !Ref 'PublicSubnetB'
-      TargetGroupARNs:
-        - !Ref TargetGroup
       Tags:
         - Key: Name
         - Value: "MyWordPressInstance"
@@ -255,14 +252,14 @@ Resources:
         - !GetAtt MyDBSecurityGroup.GroupId
       DBSubnetGroupName: !Ref DBSubnetGroup
   
-  MyDBReadReplica:
-    Type: AWS::RDS::DBInstance
-    Properties:
-      DBInstanceIdentifier: mydb-read-replica
-      SourceDBInstanceIdentifier: !Ref MyDBInstance
-      DBInstanceClass: db.t2.micro
-      AvailabilityZone: us-west-1b
-      DBSubnetGroupName: !Ref DBSubnetGroup
+  # MyDBReadReplica:
+  #   Type: AWS::RDS::DBInstance
+  #   Properties:
+  #     DBInstanceIdentifier: mydb-read-replica
+  #     SourceDBInstanceIdentifier: !Ref MyDBInstance
+  #     DBInstanceClass: db.t2.micro
+  #     AvailabilityZone: us-west-1b
+  #     DBSubnetGroupName: !Ref DBSubnetGroup
 
   MyDBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -286,9 +283,10 @@ Resources:
         - IpProtocol: tcp
           FromPort: '3306'
           ToPort: '3306'
+          CidrIp: "0.0.0.0/0"
           DestinationSecurityGroupId: !GetAtt NatGatewaySecurityGroup.GroupId # Usato per comunicazione in uscita con NAT Gateway
 
-  Resources:
+  
   MyCloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
